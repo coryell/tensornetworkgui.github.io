@@ -141,7 +141,7 @@ Vue.component(
             }
         },
 		template: `
-			<div class="code-output">
+			<div class="code-output card">
 			    <span>
                     <span class="checkbox-holder">
                         <input type="checkbox" id="checkbox-ncon" v-model="ncon">

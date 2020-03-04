@@ -65,7 +65,7 @@ Vue.component(
             }
         },
         template: `
-            <div class="toolbar">
+            <div class="toolbar card">
                 <div v-if="state.selectedNodes.length < 2">
                     <tensor-editor :state="state" />
                     <section v-if="state.selectedNodes.length === 0">
