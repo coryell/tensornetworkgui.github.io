@@ -19,33 +19,12 @@ Vue.component(
         props: {
             state: Object
         },
-        data: function() {
-            return {
-                copyNodeName: '',
-            }
-        },
         methods: {
             stopPropagation: function(event) {
                 event.stopPropagation();
             },
             deselectNode: function() {
                 this.state.selectedNodes = [];
-            },
-            copyNode: function(event) {
-                event.preventDefault();
-                let workspace = document.getElementById('workspace').getBoundingClientRect();
-
-                let node = JSON.parse(JSON.stringify(this.node));
-                node.name = this.copyNodeName;
-                node.position = {x: workspace.width / 2, y: workspace.height / 2};
-                if (this.state.snapToGrid) {
-                    node.position.x = Math.round(node.position.x / this.gridSpacing) * this.gridSpacing;
-                    node.position.y = Math.round(node.position.y / this.gridSpacing) * this.gridSpacing;
-                }
-
-                this.state.nodes.push(node);
-                this.state.selectedNodes = [node];
-                this.copyNodeName = '';
             },
         },
         computed: {
@@ -77,13 +56,8 @@ Vue.component(
                     <section v-else>
                         <div class="button-holder">
                             <button @click="deselectNode">Create new node</button>
+                            <toolbar-copy :state="state"/>
                         </div>
-                        <h4>Copy Node</h4>
-                        <form @submit="copyNode">
-                            <input type="text" v-model="copyNodeName" @keypress="stopPropagation" @keydown="stopPropagation"
-                                placeholder="name of copy" />
-                            <input type="submit" value="Copy" :disabled="copyNodeDisabled" />
-                        </form>
                     </section>
                     <div v-if="state.selectedNodes.length === 1">
                         <toolbar-edge-section :state="state" />
@@ -620,7 +594,74 @@ Vue.component(
                         <input type="submit" value="Space" :disabled="disabledFor(spacingX)" />
                     </form>
                 </section>
+                <section>
+                    <toolbar-copy :state="state"/>
+                </section>
             </div>
+        `
+    }
+);
+
+Vue.component(
+    'toolbar-copy',
+    {
+        mixins: [mixinGet, mixinGeometry],
+        props: {
+            state: Object
+        },
+        methods: {
+            copyNodes: function(event) {
+                let copies = [];
+                // Copy Nodes
+                for (let i = 0; i < this.state.selectedNodes.length; i++) {
+                    let original = this.state.selectedNodes[i];
+                    let copy = JSON.parse(JSON.stringify(original));
+                    if (original.copyOf == null) {
+                        copy.copyOf = original.name;
+                    }
+                    else {
+                        copy.copyOf = original.copyOf;
+                    }
+                    let copyNumber = 0;
+                    let copyName = copy.copyOf + "_copy_" + copyNumber;
+                    while (this.getNode(copyName) != null) {
+                        copyNumber += 1;
+                        copyName = copy.copyOf + "_copy_" + copyNumber;
+                    }
+                    copy.name = copyName;
+                    copy.position = {x: original.position.x + this.gridSpacing,
+                                     y: original.position.y + this.gridSpacing};
+                    this.state.nodes.push(copy);
+                    copies.push(copy);
+                }
+                // Copy Edges
+                for (let i = 0; i < this.state.edges.length; i++) {
+                    let edge = this.state.edges[i];
+                    let leftIndex = this.state.selectedNodes.findIndex(function(node) {
+                        return node.name === edge[0][0];
+                    });
+                    if (leftIndex === -1) {
+                        continue;
+                    }
+                    let rightIndex = this.state.selectedNodes.findIndex(function(node) {
+                        return node.name === edge[1][0];
+                    });
+                    if (rightIndex === -1) {
+                        continue;
+                    }
+                    let newEdge = JSON.parse(JSON.stringify(edge));
+                    newEdge[0][0] = copies[leftIndex].name;
+                    newEdge[1][0] = copies[rightIndex].name;
+                    this.state.edges.push(newEdge);
+                }
+                this.state.selectedNodes = copies;
+            },
+        },
+        template: `
+            <button @click="copyNodes">
+                <span v-if="state.selectedNodes.length === 1">Copy node</span>
+                <span v-else>Copy nodes</span>
+            </button>
         `
     }
 );

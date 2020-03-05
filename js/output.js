@@ -29,16 +29,41 @@ Vue.component(
         },
         computed: {
             outputCode: function() {
+                let copies = {};
+
                 let code = `import numpy as np\nimport tensornetwork as tn\n`;
 
-                code += `\n# Node definitions\n`;
+                code += `\n# Tensor definitions\n`;
                 code += `# TODO: replace np.zeros with actual values\n\n`;
+
+                let tensorNames = [];
+                let tensorValues = {};
+                for (let i = 0; i < this.state.nodes.length; i++) {
+                    let node = this.state.nodes[i];
+                    if (node.copyOf == null) {
+                        tensorNames.push(node.name);
+                        tensorValues[node.name] = this.placeholderValues(node);
+                    }
+                    else if (tensorValues[node.copyOf] == null) {
+                        tensorNames.push(node.copyOf);
+                        tensorValues[node.copyOf] = this.placeholderValues(node);
+                    }
+                }
+                for (let i = 0; i < tensorNames.length; i++) {
+                    code += `${tensorNames[i]}_tensor = ${tensorValues[tensorNames[i]]}\n`
+                }
+
+                code += `\n# Node definitions\n\n`;
 
                 for (let i = 0; i < this.state.nodes.length; i++) {
                     let node = this.state.nodes[i];
                     let values = this.placeholderValues(node);
                     let axes = this.axisNames(node);
-                    code += `${node.name} = tn.Node(${values}, name="${node.name}"${axes})\n`;
+                    let tensorName = node.name;
+                    if (node.copyOf != null) {
+                        tensorName = node.copyOf;
+                    }
+                    code += `${node.name} = tn.Node(${tensorName}_tensor, name="${node.name}"${axes})\n`;
                 }
 
                 code += `\n# Edge definitions\n\n`;
